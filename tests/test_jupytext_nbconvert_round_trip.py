@@ -1,6 +1,6 @@
 import pytest
 import jupytext
-from jupytext.header import header_to_metadata_and_cell
+from jupytext.header import header_to_metadata
 from .utils import list_notebooks, requires_nbconvert
 
 
@@ -60,10 +60,8 @@ def test_jupytext_markdown_similar_to_nbconvert(nb_file):
 
     # nbconvert file has no YAML header
     md_jupytext_lines = md_jupytext.splitlines()
-    _, _, raw_cell, pos = header_to_metadata_and_cell(md_jupytext_lines, "")
+    _, _, pos = header_to_metadata(md_jupytext_lines, "")
     md_jupytext = "\n".join(md_jupytext_lines[pos:]) + "\n"
-    if raw_cell is not None:
-        md_jupytext = raw_cell.source + "\n\n" + md_jupytext
 
     # region comments are not in nbconvert
     md_jupytext = md_jupytext.replace("<!-- #region -->\n", "").replace(

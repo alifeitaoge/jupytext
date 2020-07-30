@@ -28,29 +28,25 @@ def f(x):
 def h(y):
     return y-1
 """,
+    nb_expected=new_notebook(
+        metadata={"jupytext": {"root_level_metadata": {"title": "Simple file"}}},
+        cells=[
+            new_markdown_cell(
+                "Here we have some text\nAnd below we have some python code"
+            ),
+            new_code_cell(
+                """def f(x):
+    return x+1""",
+            ),
+            new_code_cell(
+                """def h(y):
+    return y-1""",
+            ),
+        ],
+    ),
 ):
     nb = jupytext.reads(pynb, "py")
-    assert len(nb.cells) == 4
-    assert nb.cells[0].cell_type == "raw"
-    assert nb.cells[0].source == "---\ntitle: Simple file\n---"
-    assert nb.cells[1].cell_type == "markdown"
-    assert (
-        nb.cells[1].source == "Here we have some text\n"
-        "And below we have some python code"
-    )
-    assert nb.cells[2].cell_type == "code"
-    compare(
-        nb.cells[2].source,
-        """def f(x):
-    return x+1""",
-    )
-    assert nb.cells[3].cell_type == "code"
-    compare(
-        nb.cells[3].source,
-        """def h(y):
-    return y-1""",
-    )
-
+    compare_notebooks(nb, nb_expected)
     pynb2 = jupytext.writes(nb, "py")
     compare(pynb2, pynb)
 
@@ -72,25 +68,21 @@ def f(x):
 def h(y):
     return y-1
 """,
+    nb_expected=new_notebook(
+        metadata={"jupytext": {"root_level_metadata": {"title": "Less simple file"}}},
+        cells=[
+            new_markdown_cell(
+                "Here we have some text\nAnd below we have some python code"
+            ),
+            new_code_cell(
+                "# This is a comment about function f\ndef f(x):\n    return x+1",
+            ),
+            new_code_cell("""# And a comment on h\ndef h(y):\n    return y-1"""),
+        ],
+    ),
 ):
     nb = jupytext.reads(pynb, "py")
-
-    assert len(nb.cells) == 4
-    assert nb.cells[0].cell_type == "raw"
-    assert nb.cells[0].source == "---\ntitle: Less simple file\n---"
-    assert nb.cells[1].cell_type == "markdown"
-    assert (
-        nb.cells[1].source == "Here we have some text\n"
-        "And below we have some python code"
-    )
-    assert nb.cells[2].cell_type == "code"
-    compare(
-        nb.cells[2].source,
-        "# This is a comment about function f\n" "def f(x):\n" "    return x+1",
-    )
-    assert nb.cells[3].cell_type == "code"
-    compare(nb.cells[3].source, """# And a comment on h\ndef h(y):\n    return y-1""")
-
+    compare_notebooks(nb, nb_expected)
     pynb2 = jupytext.writes(nb, "py")
     compare(pynb2, pynb)
 
@@ -167,22 +159,21 @@ def f(x):
 
     return x+1
 """,
+    nb_expected=new_notebook(
+        metadata={"jupytext": {"root_level_metadata": {"title": "Non-pep8 file"}}},
+        cells=[
+            new_markdown_cell(
+                "This file is non-pep8 as "
+                "the function below has\n"
+                "two consecutive blank lines "
+                "in its body"
+            ),
+            new_code_cell("def f(x):\n\n\n" "    return x+1"),
+        ],
+    ),
 ):
     nb = jupytext.reads(pynb, "py")
-
-    assert len(nb.cells) == 3
-    assert nb.cells[0].cell_type == "raw"
-    assert nb.cells[0].source == "---\ntitle: Non-pep8 file\n---"
-    assert nb.cells[1].cell_type == "markdown"
-    assert (
-        nb.cells[1].source == "This file is non-pep8 as "
-        "the function below has\n"
-        "two consecutive blank lines "
-        "in its body"
-    )
-    assert nb.cells[2].cell_type == "code"
-    compare(nb.cells[2].source, "def f(x):\n\n\n" "    return x+1")
-
+    compare_notebooks(nb, nb_expected)
     pynb2 = jupytext.writes(nb, "py")
     compare(pynb2, pynb)
 
@@ -198,18 +189,19 @@ a = 1
 
 a + 2
 """,
+    nb_expected=new_notebook(
+        metadata={
+            "jupytext": {
+                "root_level_metadata": {
+                    "title": "cell with two consecutive blank lines"
+                }
+            }
+        },
+        cells=[new_code_cell("a = 1\n\n\na + 2")],
+    ),
 ):
     nb = jupytext.reads(pynb, "py")
-
-    assert len(nb.cells) == 2
-    assert nb.cells[0].cell_type == "raw"
-    assert (
-        nb.cells[0].source == "---\ntitle: cell with two "
-        "consecutive blank lines\n---"
-    )
-    assert nb.cells[1].cell_type == "code"
-    assert nb.cells[1].source == "a = 1\n\n\na + 2"
-
+    compare_notebooks(nb, nb_expected)
     pynb2 = jupytext.writes(nb, "py")
     compare(pynb2, pynb)
 
@@ -503,20 +495,29 @@ def test_isolated_cell_with_magic(
 # %matplotlib inline
 1 + 1
 """,
+    nb_expected=new_notebook(
+        cells=[
+            new_code_cell(
+                """# A magic command included in a markdown
+# paragraph is code
+#
+%matplotlib inline"""
+            ),
+            new_markdown_cell(
+                """a code block may start with
+a magic command, like this one:"""
+            ),
+            new_code_cell("%matplotlib inline"),
+            new_markdown_cell("or that one"),
+            new_code_cell(
+                """%matplotlib inline
+1 + 1"""
+            ),
+        ]
+    ),
 ):
     nb = jupytext.reads(pynb, "py")
-
-    assert len(nb.cells) == 6
-    assert nb.cells[0].cell_type == "raw"
-    assert nb.cells[0].source == "---\ntitle: cell with isolated jupyter " "magic\n---"
-    assert nb.cells[1].cell_type == "code"
-    assert nb.cells[2].cell_type == "markdown"
-    assert nb.cells[3].cell_type == "code"
-    assert nb.cells[3].source == "%matplotlib inline"
-    assert nb.cells[4].cell_type == "markdown"
-    assert nb.cells[5].cell_type == "code"
-    assert nb.cells[5].source == "%matplotlib inline\n1 + 1"
-
+    compare_notebooks(nb, nb_expected)
     pynb2 = jupytext.writes(nb, "py")
     compare(pynb2, pynb)
 

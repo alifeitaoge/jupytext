@@ -13,7 +13,7 @@ import jupytext
 from jupytext.cli import jupytext as jupytext_cli
 from jupytext.jupytext import writes, write, read
 from jupytext.compare import compare_notebooks
-from jupytext.header import header_to_metadata_and_cell
+from jupytext.header import header_to_metadata
 from jupytext.formats import read_format_from_metadata, auto_ext_from_metadata
 from jupytext.kernels import kernelspec_from_language
 from .utils import (
@@ -529,7 +529,7 @@ def test_save_to_percent_format(nb_file, tmpdir):
         text_jl = stream.read()
 
     # Parse the YAML header
-    metadata, _, _, _ = header_to_metadata_and_cell(text_jl.splitlines(), "#")
+    metadata, _, _ = header_to_metadata(text_jl.splitlines(), "#")
     assert metadata["jupytext"]["formats"] == "ipynb,jl:percent"
 
 

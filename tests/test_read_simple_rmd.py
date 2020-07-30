@@ -29,46 +29,26 @@ ls()
 cat(stringi::stri_rand_lipsum(3), sep='\n\n')
 ```
 """,
+    nb_expected=new_notebook(
+        metadata={"jupytext": {"root_level_metadata": {"title": "Simple file"}}},
+        cells=[
+            new_code_cell(
+                "import numpy as np\n" "x = np.arange(0, 2*math.pi, eps)",
+                metadata={"echo": True},
+            ),
+            new_code_cell(
+                "x = np.arange(0,1,eps)\ny = np.abs(x)-.5", metadata={"echo": True}
+            ),
+            new_code_cell("%%R\nls()"),
+            new_code_cell(
+                "%%R -i x\ncat(stringi::" "stri_rand_lipsum(3), sep='\n\n')",
+                metadata={"results": "asis"},
+            ),
+        ],
+    ),
 ):
     nb = jupytext.reads(rmd, "Rmd")
-    compare(
-        nb.cells,
-        [
-            {
-                "cell_type": "raw",
-                "source": "---\ntitle: Simple file\n---",
-                "metadata": {},
-            },
-            {
-                "cell_type": "code",
-                "metadata": {"echo": True},
-                "execution_count": None,
-                "source": "import numpy as np\n" "x = np.arange(0, 2*math.pi, eps)",
-                "outputs": [],
-            },
-            {
-                "cell_type": "code",
-                "metadata": {"echo": True},
-                "execution_count": None,
-                "source": "x = np.arange(0,1,eps)\ny = np.abs(x)-.5",
-                "outputs": [],
-            },
-            {
-                "cell_type": "code",
-                "metadata": {},
-                "execution_count": None,
-                "source": "%%R\nls()",
-                "outputs": [],
-            },
-            {
-                "cell_type": "code",
-                "metadata": {"results": "asis"},
-                "execution_count": None,
-                "source": "%%R -i x\ncat(stringi::" "stri_rand_lipsum(3), sep='\n\n')",
-                "outputs": [],
-            },
-        ],
-    )
+    compare_notebooks(nb, nb_expected)
 
     rmd2 = jupytext.writes(nb, "Rmd")
     rmd2 = re.sub(r"```{r ", "```{r, ", rmd2)

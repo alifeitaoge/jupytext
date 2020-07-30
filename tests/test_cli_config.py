@@ -2,7 +2,7 @@ import pytest
 from nbformat.v4.nbbase import new_notebook, new_code_cell
 from jupytext.cli import jupytext
 from jupytext.jupytext import read, write
-from jupytext.header import header_to_metadata_and_cell
+from jupytext.header import header_to_metadata
 from jupytext.compare import compare
 
 
@@ -62,7 +62,7 @@ def test_preferred_jupytext_formats_save(tmpdir):
         text_jl = stream.read()
 
     # Parse the YAML header
-    metadata, _, _, _ = header_to_metadata_and_cell(text_jl.splitlines(), "#")
+    metadata, _, _ = header_to_metadata(text_jl.splitlines(), "#")
     assert metadata["jupytext"]["formats"] == "ipynb,jl:percent"
 
 

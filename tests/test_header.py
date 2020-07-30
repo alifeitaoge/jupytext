@@ -1,10 +1,10 @@
-from nbformat.v4.nbbase import new_notebook, new_raw_cell, new_markdown_cell
+from nbformat.v4.nbbase import new_notebook
 from jupytext.compare import compare
 import jupytext
 from jupytext.header import (
     uncomment_line,
-    header_to_metadata_and_cell,
-    metadata_and_cell_to_header,
+    header_to_metadata,
+    metadata_to_header,
 )
 from jupytext.formats import get_format_implementation
 
@@ -23,17 +23,9 @@ title: Sample header
 Header is followed by a blank line
 """
     lines = text.splitlines()
-    metadata, _, cell, pos = header_to_metadata_and_cell(lines, "")
+    metadata, _, pos = header_to_metadata(lines, "")
 
-    assert metadata == {}
-    assert cell.cell_type == "raw"
-    assert (
-        cell.source
-        == """---
-title: Sample header
----"""
-    )
-    assert cell.metadata == {}
+    compare(metadata, {"jupytext": {"root_level_metadata": {"title": "Sample header"}}})
     assert lines[pos].startswith("Header is")
 
 
@@ -44,17 +36,9 @@ title: Sample header
 Header is not followed by a blank line
 """
     lines = text.splitlines()
-    metadata, _, cell, pos = header_to_metadata_and_cell(lines, "")
+    metadata, _, pos = header_to_metadata(lines, "")
 
-    assert metadata == {}
-    assert cell.cell_type == "raw"
-    assert (
-        cell.source
-        == """---
-title: Sample header
----"""
-    )
-    assert cell.metadata == {"lines_to_next_cell": 0}
+    compare(metadata, {"jupytext": {"root_level_metadata": {"title": "Sample header"}}})
     assert lines[pos].startswith("Header is")
 
 
@@ -62,53 +46,44 @@ def test_header_to_metadata_and_cell_metadata():
     text = """---
 title: Sample header
 jupyter:
-  mainlanguage: python
+  main_language: python
 ---
 """
     lines = text.splitlines()
-    metadata, _, cell, pos = header_to_metadata_and_cell(lines, "")
+    metadata, _, pos = header_to_metadata(lines, "")
 
-    assert metadata == {"mainlanguage": "python"}
-    assert cell.cell_type == "raw"
-    assert (
-        cell.source
-        == """---
-title: Sample header
----"""
+    compare(
+        metadata,
+        {
+            "main_language": "python",
+            "jupytext": {"root_level_metadata": {"title": "Sample header"}},
+        },
     )
-    assert cell.metadata == {"lines_to_next_cell": 0}
     assert pos == len(lines)
 
 
 def test_metadata_and_cell_to_header(no_jupytext_version_number):
-    metadata = {"jupytext": {"mainlanguage": "python"}}
-    nb = new_notebook(
-        metadata=metadata, cells=[new_raw_cell(source="---\ntitle: Sample header\n---")]
-    )
-    header, lines_to_next_cell = metadata_and_cell_to_header(
-        nb, metadata, get_format_implementation(".md"), ".md"
-    )
-    assert (
-        "\n".join(header)
-        == """---
-title: Sample header
+    metadata = {
+        "jupytext": {
+            "main_language": "python",
+            "root_level_metadata": {"title": "Sample header"},
+        }
+    }
+    header = metadata_to_header(metadata, get_format_implementation(".md"), ".md")
+    compare(
+        "\n".join(header),
+        """---
 jupyter:
   jupytext:
-    mainlanguage: python
----"""
+    main_language: python
+title: Sample header
+---""",
     )
-    assert nb.cells == []
-    assert lines_to_next_cell is None
 
 
 def test_metadata_and_cell_to_header2(no_jupytext_version_number):
-    nb = new_notebook(cells=[new_markdown_cell(source="Some markdown\ntext")])
-    header, lines_to_next_cell = metadata_and_cell_to_header(
-        nb, {}, get_format_implementation(".md"), ".md"
-    )
+    header = metadata_to_header({}, get_format_implementation(".md"), ".md")
     assert header == []
-    assert len(nb.cells) == 1
-    assert lines_to_next_cell is None
 
 
 def test_notebook_from_plain_script_has_metadata_filter(
@@ -161,18 +136,14 @@ jupyter:
 -->
 """
     lines = text.splitlines()
-    metadata, _, cell, _ = header_to_metadata_and_cell(lines, "")
+    metadata, _, _ = header_to_metadata(lines, "")
 
     assert metadata == {"title": "Sample header"}
-    assert cell is None
 
 
 def test_header_to_html_comment(no_jupytext_version_number):
     metadata = {"jupytext": {"mainlanguage": "python", "hide_notebook_metadata": True}}
-    nb = new_notebook(metadata=metadata, cells=[])
-    header, lines_to_next_cell = metadata_and_cell_to_header(
-        nb, metadata, get_format_implementation(".md"), ".md"
-    )
+    header = metadata_to_header(metadata, get_format_implementation(".md"), ".md")
     compare(
         "\n".join(header),
         """<!--
