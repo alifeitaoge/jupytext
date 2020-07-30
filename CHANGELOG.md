@@ -16,7 +16,8 @@ error will occur if the required dependencies, resp. `myst-parser` and `pandoc`,
 **Fixed**
 - Configured coverage targets in `codecov.yml`
 - Only scripts can have an encoding comment, not Markdown or R Markdown files (#576)
-- Support spaces in `--pipe` commands (#562)
+- Spaces in `--pipe` commands are supported (#562)
+- MyST Markdown files are recognized as such even if `myst` is missing (#556)
 
 
 1.5.2 (2020-07-21)
