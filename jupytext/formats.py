@@ -7,7 +7,7 @@ import os
 import re
 import warnings
 import nbformat
-from .header import header_to_metadata_and_cell, insert_or_test_version_number
+from .header import header_to_metadata, insert_or_test_version_number
 from .cell_reader import (
     MarkdownCellReader,
     RMarkdownCellReader,
@@ -265,9 +265,9 @@ def read_metadata(text, ext):
     else:
         comment = _SCRIPT_EXTENSIONS.get(ext, {}).get("comment", "#")
 
-    metadata, _, _, _ = header_to_metadata_and_cell(lines, comment, ext)
+    metadata, _, _ = header_to_metadata(lines, comment)
     if ext in [".r", ".R"] and not metadata:
-        metadata, _, _, _ = header_to_metadata_and_cell(lines, "#'", ext)
+        metadata, _, _ = header_to_metadata(lines, "#'")
 
     return metadata
 
@@ -377,7 +377,7 @@ def divine_format(text):
 
     lines = text.splitlines()
     for comment in ["", "#"] + _COMMENT_CHARS:
-        metadata, _, _, _ = header_to_metadata_and_cell(lines, comment)
+        metadata, _, _ = header_to_metadata(lines, comment)
         ext = (
             metadata.get("jupytext", {}).get("text_representation", {}).get("extension")
         )

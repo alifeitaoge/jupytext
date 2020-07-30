@@ -5,17 +5,14 @@ import re
 import yaml
 from yaml.representer import SafeRepresenter
 import nbformat
-from nbformat.v4.nbbase import new_raw_cell
 from .version import __version__
 from .languages import _SCRIPT_EXTENSIONS, comment_lines
 from .metadata_filter import filter_metadata, _DEFAULT_NOTEBOOK_METADATA
-from .pep8 import pep8_lines_between_cells
 
 SafeRepresenter.add_representer(nbformat.NotebookNode, SafeRepresenter.represent_dict)
 
 _HEADER_RE = re.compile(r"^---\s*$")
 _BLANK_RE = re.compile(r"^\s*$")
-_JUPYTER_RE = re.compile(r"^jupyter\s*:\s*$")
 _LEFTSPACE_RE = re.compile(r"^\s")
 _UTF8_HEADER = " -*- coding: utf-8 -*-"
 
@@ -85,45 +82,34 @@ def insert_jupytext_info_and_filter_metadata(metadata, ext, text_format):
     )
 
 
-def metadata_and_cell_to_header(notebook, metadata, text_format, ext):
+def metadata_to_header(metadata, text_format, ext):
     """
     Return the text header corresponding to a notebook, and remove the
     first cell of the notebook if it contained the header
     """
 
-    header = []
-
-    lines_to_next_cell = None
-    if notebook.cells:
-        cell = notebook.cells[0]
-        if cell.cell_type == "raw":
-            lines = cell.source.strip("\n\t ").splitlines()
-            if (
-                len(lines) >= 2
-                and _HEADER_RE.match(lines[0])
-                and _HEADER_RE.match(lines[-1])
-            ):
-                header = lines[1:-1]
-                lines_to_next_cell = cell.metadata.get("lines_to_next_cell")
-                notebook.cells = notebook.cells[1:]
-
+    root_level_metadata = metadata.get("jupytext", {}).pop("root_level_metadata", {})
     metadata = insert_jupytext_info_and_filter_metadata(metadata, ext, text_format)
 
     if metadata:
-        header.extend(
-            yaml.safe_dump({"jupyter": metadata}, default_flow_style=False).splitlines()
-        )
+        root_level_metadata["jupyter"] = metadata
 
-    if header:
-        header = ["---"] + header + ["---"]
+    if not root_level_metadata:
+        return []
 
-        if (
-            metadata.get("jupytext", {}).get("hide_notebook_metadata", False)
-            and text_format.format_name == "markdown"
-        ):
-            header = ["<!--", ""] + header + ["", "-->"]
+    header = (
+        ["---"]
+        + yaml.safe_dump(root_level_metadata, default_flow_style=False).splitlines()
+        + ["---"]
+    )
 
-    return comment_lines(header, text_format.header_prefix), lines_to_next_cell
+    if (
+        metadata.get("jupytext", {}).get("hide_notebook_metadata", False)
+        and text_format.format_name == "markdown"
+    ):
+        header = ["<!--", ""] + header + ["", "-->"]
+
+    return comment_lines(header, text_format.header_prefix)
 
 
 def recursive_update(target, update):
@@ -141,15 +127,14 @@ def recursive_update(target, update):
     return target
 
 
-def header_to_metadata_and_cell(lines, header_prefix, ext=None):
+def header_to_metadata(lines, header_prefix):
     """
     Return the metadata, a boolean to indicate if a jupyter section was found,
      the first cell of notebook if some metadata is found outside of the jupyter section, and next loc in text
     """
 
     header = []
-    jupyter = []
-    in_jupyter = False
+    jupyter = False
     in_html_div = False
 
     start = 0
@@ -202,41 +187,24 @@ def header_to_metadata_and_cell(lines, header_prefix, ext=None):
                     continue
                 break
 
-        if _JUPYTER_RE.match(line):
-            in_jupyter = True
-        elif line and not _LEFTSPACE_RE.match(line):
-            in_jupyter = False
-
-        if in_jupyter:
-            jupyter.append(line)
-        else:
-            header.append(line)
+        header.append(line)
 
     if ended:
-        if jupyter:
-            recursive_update(metadata, yaml.safe_load("\n".join(jupyter))["jupyter"])
+        root_level_metadata = yaml.safe_load("\n".join(header))
+        if "jupyter" in root_level_metadata:
+            jupyter = True
+            recursive_update(metadata, root_level_metadata.pop("jupyter"))
 
-        lines_to_next_cell = 1
         if len(lines) > i + 1:
             line = uncomment_line(lines[i + 1], header_prefix)
-            if not _BLANK_RE.match(line):
-                lines_to_next_cell = 0
-            else:
+            if _BLANK_RE.match(line):
                 i = i + 1
-        else:
-            lines_to_next_cell = 0
 
-        if header:
-            cell = new_raw_cell(
-                source="\n".join(["---"] + header + ["---"]),
-                metadata={}
-                if lines_to_next_cell
-                == pep8_lines_between_cells(["---"], lines[i + 1 :], ext)
-                else {"lines_to_next_cell": lines_to_next_cell},
-            )
-        else:
-            cell = None
+        if root_level_metadata:
+            metadata.setdefault("jupytext", {})[
+                "root_level_metadata"
+            ] = root_level_metadata
 
-        return metadata, jupyter, cell, i + 1
+        return metadata, jupyter, i + 1
 
-    return metadata, False, None, start
+    return metadata, False, start

@@ -23,8 +23,8 @@ from .formats import (
     long_form_one_format,
 )
 from .header import (
-    header_to_metadata_and_cell,
-    metadata_and_cell_to_header,
+    header_to_metadata,
+    metadata_to_header,
     insert_jupytext_info_and_filter_metadata,
 )
 from .header import encoding_and_executable, insert_or_test_version_number
@@ -81,16 +81,13 @@ class TextNotebookConverter(NotebookReader, NotebookWriter):
         lines = s.splitlines()
 
         cells = []
-        metadata, jupyter_md, header_cell, pos = header_to_metadata_and_cell(
-            lines, self.implementation.header_prefix, self.implementation.extension
+        metadata, jupyter_md, pos = header_to_metadata(
+            lines, self.implementation.header_prefix
         )
         default_language = default_language_from_metadata_and_ext(
             metadata, self.implementation.extension
         )
         self.update_fmt_with_notebook_options(metadata)
-
-        if header_cell:
-            cells.append(header_cell)
 
         lines = lines[pos:]
 
@@ -241,9 +238,7 @@ class TextNotebookConverter(NotebookReader, NotebookWriter):
                     break
 
         header = encoding_and_executable(nb, metadata, self.ext)
-        header_content, header_lines_to_next_cell = metadata_and_cell_to_header(
-            nb, metadata, self.implementation, self.ext
-        )
+        header_content = metadata_to_header(metadata, self.implementation, self.ext)
         header.extend(header_content)
 
         cell_exporters = []
@@ -308,10 +303,9 @@ class TextNotebookConverter(NotebookReader, NotebookWriter):
 
             lines = text + lines
 
-        if header_lines_to_next_cell is None:
-            header_lines_to_next_cell = pep8_lines_between_cells(
-                header_content, lines, self.implementation.extension
-            )
+        header_lines_to_next_cell = pep8_lines_between_cells(
+            header_content, lines, self.implementation.extension
+        )
 
         header.extend([""] * header_lines_to_next_cell)
 
